@@ -1,0 +1,31 @@
+# roles/sidewinder/tasks/main.yml
+---
+
+- name: copy gitlab deployment key
+  copy:
+    src: gitlab
+    dest: "{{ git_keyfile }}"
+    mode: 0600
+
+- name: download Sidewinder source
+  git:
+    repo: "{{ sidewinder_repo }}"
+    dest: "{{ sidewinder_build_root }}/sidewinder"
+    version: "{{ sidewinder_version }}"
+    accept_hostkey: yes
+    key_file: "{{ git_keyfile }}"
+  register: git_status
+
+- name: create build directory
+  file: path={{ sidewinder_build_root }}/sidewinder/build state=directory
+  when: git_status|changed
+
+- name: run cmake
+  command: cmake -DCMAKE_BUILD_TYPE=Release ..
+  args:
+    chdir: "{{ sidewinder_build_root }}/sidewinder/build"
+  when: git_status|changed
+
+- name: build Sidewinder
+  make: chdir={{ sidewinder_build_root }}/sidewinder/build target=install
+  when: git_status|changed

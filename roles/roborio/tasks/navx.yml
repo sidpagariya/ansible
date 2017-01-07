@@ -1,0 +1,33 @@
+# roles/roborio/tasks/navx.yml
+---
+- include_vars: navx.yml
+  tags: navx
+
+- name: download NavX library
+  get_url:
+    url: "{{ navx_url }}"
+    dest: /usr/local/src/
+    checksum: sha256:{{ navx_sha256 }}
+  register: navx_downloaded
+
+- name: create a temp directory
+  command: mktemp -d
+  register: mktemp_dir
+  when: navx_downloaded.changed
+
+- name: unzip NavX library
+  unarchive:
+    src: /usr/local/src/{{ navx_zip }}
+    dest: "{{ mktemp_dir.stdout }}/"
+    remote_src: true
+  when: navx_downloaded.changed
+
+- name: remove old NavX library
+  file:
+    path: /opt/navx/
+    state: absent
+  when: navx_downloaded.changed
+
+- name: install NavX library
+  command: mv {{ mktemp_dir.stdout }}/roborio/cpp /opt/navx
+  when: navx_downloaded.changed
